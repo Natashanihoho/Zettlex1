@@ -108,27 +108,6 @@ static void MX_TIM2_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint32_t Read_Data(SPI_HandleTypeDef *hspi, GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin)
-{ 
-	//uint8_t spi_buf[3]; // 3 байта данных от датчика
-	//uint32_t spi_value; // 22-битное значение данных
-	uint16_t angle;     // значение угла	
-	
-	while(__HAL_SPI_GET_FLAG(hspi, SPI_FLAG_RXNE));       // wait RXNE=0
-	HAL_GPIO_WritePin(GPIOx, GPIO_Pin, GPIO_PIN_SET);     // set RS1 or RS2
-	HAL_SPI_Receive(hspi, spi_buf, 3, 100);               // reading data
-	HAL_GPIO_WritePin(GPIOx, GPIO_Pin, GPIO_PIN_RESET);   // reset RS1 or RS2
-	uint32_t spi_value = (uint32_t)(spi_buf[0]) << 16|(uint32_t)spi_buf[1] << 8| spi_buf[2];
-	if(spi_buf[0] & 0x80) // Position Valid Flag. Set to 1 when data is valid
-	{
-		//spi_value = (uint32_t)(spi_buf[0] & 0x3F) << 16|(uint32_t)spi_buf[1] << 8| spi_buf[2];
-	}
-	HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9);
-	//for(int i = 0; i < 3; i++)                              // to clear buffer SPI
-		//spi_buf[i]= hspi->Instance->DR;
-	
-	return spi_value;
-}
 
 uint32_t Read_Data1()
 { count1++;
@@ -159,30 +138,12 @@ uint32_t Read_Data2()
 	HAL_GPIO_WritePin(GPIOC, RS2_EN_Pin, GPIO_PIN_SET);     // set RS1 or RS2
 	HAL_SPI_Receive(&hspi3, spi_buf2, 3, 100);               // reading data
 	HAL_GPIO_WritePin(GPIOC, RS2_EN_Pin, GPIO_PIN_RESET);   // reset RS1 or RS2
-	//uint32_t spi_value = (uint32_t)(spi_buf1[0] & 0x0F ) << 16|(uint32_t)spi_buf1[1] << 8| spi_buf1[2];
 	if(spi_buf2[0] & 0x80) // Position Valid Flag. Set to 1 when data is valid
 	{
 		spi_value2 = (uint32_t)(spi_buf2[0] & 0x3F) << 16|(uint32_t)spi_buf2[1] << 8| spi_buf2[2];
 	}
 	
 	return spi_value2;
-}
-
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-	if(htim->Instance == TIM2)
-	{
-		//angle1++;
-		//angle2++;
-		//angle1 = Read_Data(&hspi1, GPIOA, RS1_EN_Pin);
-		//angle2 = Read_Data(&hspi3, GPIOC, RS2_EN_Pin);
-	}
-}
-
-void angleChange()
-{
-	angle1++;
-		angle2++;
 }
 
 uint8_t XOR_calc(uint8_t length)								//Checksum XOR
@@ -401,58 +362,22 @@ void CheckPacketRX(void)
 											 }
 		case CMD_ADD_SIGNAL: dataLength = 2; if(s != 0) first = 0; num_signals[s++] = buf_rx[8]; break;												 
 											 
-		case CMD_READ_DATA: /*if(!scan_mode)
-												{
-													for(int i = 1; i < s; i++)
+		case CMD_READ_DATA:							
+													if(!scan_mode)
 													{
-														switch(num_signals[i])
-														{
-															case 0: data_signals[i-1] = vers; break;
-															case 1: data_signals[i-1] = angle1; break;
-															case 2: data_signals[i-1] = angle2; break;
-														}
-													}
-													data[0] = N_ITER;
-													data[1] = N_ITER/256;
-													
-													data[2] = STATUS_OK;
-												
-													for(int i = 0, j = 3; i < s-1; i++, j+=2)
-													{
-														data[j] = data_signals[i];
-														data[j+1] = data_signals[i]/256;
-													}									  
-																								
-													dataLength = 5+2*(s-1);	
-                            													
-												}
-												else
-												{
-														data[0] = 0;
-														data[1] = 0;
-														
-														data[2] = STATUS_OK;
-																												
-														dataLength = 5;
-														
-												}
-													break;*/
-													
-													if(!scan_mode){
-														//angleChange();
 														spi_value1 = Read_Data1();
 														spi_value2 = Read_Data2();
 														data[0] = N_ITER;
 													  data[1] = N_ITER/256;
 														data[2] = STATUS_OK;
 														data[3] = spi_value1; 
-													 data[4] = spi_value1 >> 8;
-													 data[5] = spi_value1 >> 16;
-													 data[6] = spi_value1 >> 24;
-															data[7] = spi_value2; 
-													 data[8] = spi_value2 >> 8;
-													 data[9] = spi_value2 >> 16;
-													 data[10] = spi_value2 >> 24;
+													  data[4] = spi_value1 >> 8;
+													  data[5] = spi_value1 >> 16;
+													  data[6] = spi_value1 >> 24;
+														data[7] = spi_value2; 
+													  data[8] = spi_value2 >> 8;
+													  data[9] = spi_value2 >> 16;
+													  data[10] = spi_value2 >> 24;
 														dataLength = 13;	
 													}
 													else
@@ -529,8 +454,8 @@ int main(void)
   MX_USART1_UART_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-  //HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);  // on LED
-	HAL_TIM_Base_Start_IT(&htim2);
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);  // on LED
+	//HAL_TIM_Base_Start_IT(&htim2);
 	HAL_UART_Receive_IT(&huart1, &receivedByte,1);
   /* USER CODE END 2 */
 
@@ -538,10 +463,6 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-		//spi_value1 = Read_Data1();
-		//HAL_Delay(1000);
-		//spi_value2 = Read_Data2();
-		//HAL_Delay(1000);
 		
     /* USER CODE END WHILE */
 
