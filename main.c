@@ -77,10 +77,10 @@ uint8_t s = 0;
 
 uint8_t first = 1;
 
-struct SignDescriptor Sign12 = {STRUCT_XXX, SIGN_TYPE_UINT, ATTRIBUTE_READING|ATTRIBUTE_TELEMETRY,   
+struct SignDescriptor Sign12 = {STRUCT_XXX, SIGN_TYPE_ULONG, ATTRIBUTE_READING|ATTRIBUTE_TELEMETRY,   
 	UNIT_0, PERIOD, DIM_ANG_DEGREE, COEFFICIENT};   // дескриптор сигналов
 
-struct SignDescriptor Sign0 = {STRUCT_XXX, SIGN_TYPE_UINT, ATTRIBUTE_READING|ATTRIBUTE_TELEMETRY,
+struct SignDescriptor Sign0 = {STRUCT_XXX, SIGN_TYPE_ULONG, ATTRIBUTE_READING|ATTRIBUTE_TELEMETRY,
 	UNIT_NONE, PERIOD, DIM_NONE, COEFFICIENT};   // дескриптор версии
 
 uint16_t vers = 0;
@@ -365,21 +365,27 @@ void CheckPacketRX(void)
 															 break;
 	  case CMD_CONTROL: dataLength = 2; break;
 	  case CMD_SIGNATURE: dataLength = 2; break;
-		case CMD_READ_VALUE: dataLength = 4; 
+		case CMD_READ_VALUE: dataLength = 6; 
 												 if(buf_rx[8] == 0)
 												 {
 													 data[0] = vers; 
 													 data[1] = vers >> 8; 
+													 data[2] = vers >> 16;
+													 data[3] = vers >> 24;
 												 }
 												 else if(buf_rx[8] == 1)
 												 {
-													 data[0] = angle1; 
-													 data[1] = angle1 >> 8;
+													 data[0] = spi_value1; 
+													 data[1] = spi_value1 >> 8;
+													 data[2] = spi_value1 >> 16;
+													 data[3] = spi_value1 >> 24;
 												 }
 												 else if(buf_rx[8] == 2) 
 												 {
-													 data[0] = angle2; 
-													 data[1] = angle2 >> 8;
+													 data[0] = spi_value2; 
+													 data[1] = spi_value2 >> 8;
+													 data[2] = spi_value2 >> 16; 
+													 data[3] = spi_value2 >> 24;
 												 }	break;
 		//--------------Телеметрия---------------
 		case CMD_TEL_DESCRIPTOR: dataLength = 14;
@@ -433,15 +439,21 @@ void CheckPacketRX(void)
 													break;*/
 													
 													if(!scan_mode){
-														angleChange();
+														//angleChange();
+														spi_value1 = Read_Data1();
+														spi_value2 = Read_Data2();
 														data[0] = N_ITER;
 													  data[1] = N_ITER/256;
 														data[2] = STATUS_OK;
-														data[3] = angle1;
-														data[4] = angle1/256;
-														data[5] = angle2;
-														data[6] = angle2/256;
-														dataLength = 9;	
+														data[3] = spi_value1; 
+													 data[4] = spi_value1 >> 8;
+													 data[5] = spi_value1 >> 16;
+													 data[6] = spi_value1 >> 24;
+															data[7] = spi_value2; 
+													 data[8] = spi_value2 >> 8;
+													 data[9] = spi_value2 >> 16;
+													 data[10] = spi_value2 >> 24;
+														dataLength = 13;	
 													}
 													else
 													{
