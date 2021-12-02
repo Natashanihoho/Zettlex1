@@ -77,7 +77,10 @@ uint8_t s = 0;
 
 uint8_t first = 1;
 
-struct SignDescriptor Sign12 = {STRUCT_XXX, SIGN_TYPE_ULONG, ATTRIBUTE_READING|ATTRIBUTE_TELEMETRY,   
+struct SignDescriptor Sign12minutes = {STRUCT_XXX, SIGN_TYPE_FLOAT, ATTRIBUTE_CONTROl|ATTRIBUTE_READING|ATTRIBUTE_TELEMETRY,   
+	UNIT_0, PERIOD, DIM_ANG_DEGREE, COEFFICIENT};   // дескриптор сигналов (minutes)
+
+struct SignDescriptor Sign12 = {STRUCT_XXX, SIGN_TYPE_ULONG, ATTRIBUTE_CONTROl|ATTRIBUTE_READING|ATTRIBUTE_TELEMETRY,   
 	UNIT_0, PERIOD, DIM_ANG_DEGREE, COEFFICIENT};   // дескриптор сигналов
 
 struct SignDescriptor Sign0 = {STRUCT_XXX, SIGN_TYPE_ULONG, ATTRIBUTE_READING|ATTRIBUTE_TELEMETRY,
@@ -219,7 +222,16 @@ void ConvertData(int32_t dat, uint8_t type, uint8_t k)
 	}
 }
 
-
+void getConvertedFloat(uint32_t spiValue, uint8_t *arr) 
+{
+		float f = (float)(spiValue) * 360 * 60 / (float)4194303;
+		uint8_t *ptr;
+		ptr = (uint8_t *)&f;
+		for(int i = 0; i < 4; i++) 
+	  {
+				arr[i] = *(ptr + i);
+		}
+}
 
 void CreateSignDescriptor(struct SignDescriptor signal, uint8_t *signName, uint8_t x)
 {
@@ -317,11 +329,27 @@ void CheckPacketRX(void)
 															}
 															else if(buf_rx[8] == 2)
 															{
+																dataLength = 36; 
+																uint8_t signalName[] = {'Z', 'e', 't', 't', 'l', 'e', 'x', '1', '_', 'm', 'i', 'n', 'u', 't', 'e', 's', 0x00};
+																for(int i = 0; i < 17; i++)
+																	data[i] = signalName[i];
+																CreateSignDescriptor(Sign12minutes, signalName, 17);	
+															}
+															else if(buf_rx[8] == 3)
+															{
 																dataLength = 28; 
 																uint8_t signalName[] = {'Z', 'e', 't', 't', 'l', 'e', 'x', '2', 0x00};
 																for(int i = 0; i < 9; i++)
 																	data[i] = signalName[i];
 																CreateSignDescriptor(Sign12, signalName, 9);	
+															}
+															else if(buf_rx[8] == 4)
+															{
+																dataLength = 36; 
+																uint8_t signalName[] = {'Z', 'e', 't', 't', 'l', 'e', 'x', '2', '_', 'm', 'i', 'n', 'u', 't', 'e', 's', 0x00};
+																for(int i = 0; i < 17; i++)
+																	data[i] = signalName[i];
+																CreateSignDescriptor(Sign12minutes, signalName, 17);	
 															}
 															 break;
 	  case CMD_CONTROL: dataLength = 2; break;
@@ -343,11 +371,30 @@ void CheckPacketRX(void)
 												 }
 												 else if(buf_rx[8] == 2) 
 												 {
+													 uint8_t float_array[4];
+													 getConvertedFloat(spi_value1, float_array);
+														data[0] = float_array[0]; 
+													  data[1] = float_array[1];
+													  data[2] = float_array[2];
+													  data[3] = float_array[3];
+												 }
+												 else if(buf_rx[8] == 3) 
+												 {
 													 data[0] = spi_value2; 
 													 data[1] = spi_value2 >> 8;
 													 data[2] = spi_value2 >> 16; 
 													 data[3] = spi_value2 >> 24;
-												 }	break;
+												 }
+												 else if(buf_rx[8] == 4) 
+												 {
+													  uint8_t float_array2[4];
+													  getConvertedFloat(spi_value2, float_array2);
+														data[0] = float_array2[0]; 
+													  data[1] = float_array2[1];
+													  data[2] = float_array2[2];
+													  data[3] = float_array2[3];
+												 }
+												 	break;
 		//--------------Телеметрия---------------
 		case CMD_TEL_DESCRIPTOR: dataLength = 14;
 														 ConvertData(PERIOD_TEL, 32, 0); 													
@@ -362,7 +409,7 @@ void CheckPacketRX(void)
 											 }
 		case CMD_ADD_SIGNAL: dataLength = 2; if(s != 0) first = 0; num_signals[s++] = buf_rx[8]; break;												 
 											 
-		case CMD_READ_DATA:							
+		case CMD_READ_DATA:			
 													if(!scan_mode)
 													{
 														spi_value1 = Read_Data1();
@@ -370,15 +417,34 @@ void CheckPacketRX(void)
 														data[0] = N_ITER;
 													  data[1] = N_ITER/256;
 														data[2] = STATUS_OK;
+														
 														data[3] = spi_value1; 
 													  data[4] = spi_value1 >> 8;
 													  data[5] = spi_value1 >> 16;
 													  data[6] = spi_value1 >> 24;
-														data[7] = spi_value2; 
-													  data[8] = spi_value2 >> 8;
-													  data[9] = spi_value2 >> 16;
-													  data[10] = spi_value2 >> 24;
-														dataLength = 13;	
+													
+													 uint8_t float_array[4];
+													 getConvertedFloat(spi_value1, float_array);
+														
+														data[7] = float_array[0]; 
+													  data[8] = float_array[1];
+													  data[9] = float_array[2];
+													  data[10] = float_array[3];
+														
+														data[11] = spi_value2; 
+													  data[12] = spi_value2 >> 8;
+													  data[13] = spi_value2 >> 16;
+													  data[14] = spi_value2 >> 24;
+														
+														uint8_t float_array2[4];
+													  getConvertedFloat(spi_value2, float_array2);
+														
+														data[15] = float_array2[0]; 
+													  data[16] = float_array2[1];
+													  data[17] = float_array2[2];
+													  data[18] = float_array2[3];
+														
+														dataLength = 21; //13;	
 													}
 													else
 													{
